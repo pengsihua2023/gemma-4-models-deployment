@@ -48,3 +48,8 @@ try:
 except ImportError:  # 旧版包名兼容
     from duckduckgo_search import DDGS
 ```
+
+## 启动Gemma 4
+```
+python3 Gemma4
+```
