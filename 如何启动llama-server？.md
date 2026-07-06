@@ -30,3 +30,21 @@ cd ~/Gemma_4_E2B-it/llama.cpp
   --jinja
 
 ```
+
+## 结果：得到一个llama-server启动的聊天界面
+http://127.0.0.1:8080  
+太简单了，如果你想用带搜索功能的 Gemma agent，就需要再启动 python3 Gemma4。  
+## 再开一个新的 WSL 终端
+```
+cd ~/Gemma_4_E2B-it
+
+```
+
+然后运行：  
+
+```
+python3 Gemma4
+```
+
+然后出现链接： http://127.0.0.1:7860  
+这就是我们要的界面！  
