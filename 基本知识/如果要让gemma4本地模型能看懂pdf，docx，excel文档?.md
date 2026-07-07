@@ -125,12 +125,76 @@ python3 Gemma4
 
 先把这版跑起来,传个普通 PDF/Word/Excel 测测。遇到扫描件需要 OCR,或长文档需要分块,再告诉我。
 
-## 处理前的Gemma4文件
+## 以上处理还不够，问问题的第二次就出现错误
+
+这就是之前那个 **400 `unsupported content[].type`** 错误——说明你**还没改 `run_agent`,或者 `_to_text` 那步没加上**。
+
+原因回顾:第一次正常、第二次出错,是因为第二轮时第一轮的**文件消息进了 history**,它的 content 是复杂结构(list/dict),被原样传给 llama-server,而 llama.cpp 不认。
+
+**确认一下:你前面加过 `_to_text` 函数、改过 `run_agent` 吗?**
+
+如果没有,现在补上。打开 `Gemma4`:
+
+**第一步:在 `run_agent` 上方加 `_to_text` 函数**
+
+```python
+def _to_text(content) -> str:
+    """把历史里可能出现的复杂 content(str/dict/list)统一压成纯文本。"""
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, (list, tuple)):
+        return "\n".join(_to_text(item) for item in content if _to_text(item))
+    if isinstance(content, dict):
+        if "text" in content:
+            return str(content["text"])
+        if "content" in content:
+            return _to_text(content["content"])
+        if "path" in content or "file" in content or content.get("type") == "file":
+            return "（此前上传过一个文件）"
+        return ""
+    return str(content)
 ```
 
+**第二步:替换 `run_agent` 里解析 history 的部分**
 
-```
-## 处理后的Gemma4文件
+找到 `run_agent` 里 `for turn in history` 那段循环,把处理 content 的地方都包上 `_to_text()`:
+
+```python
+def run_agent(message: str, history: list):
+    messages = []
+    for turn in history or []:
+        if isinstance(turn, dict):
+            role = turn.get("role")
+            content = _to_text(turn.get("content", ""))      # ← 关键:包 _to_text
+            if role in ("user", "assistant") and content:
+                messages.append((role, content))
+        elif isinstance(turn, (list, tuple)) and len(turn) == 2:
+            user_msg = _to_text(turn[0])                      # ← 包 _to_text
+            bot_msg = _to_text(turn[1])                       # ← 包 _to_text
+            if user_msg:
+                messages.append(("user", user_msg))
+            if bot_msg:
+                messages.append(("assistant", bot_msg))
+    messages.append(("user", message))
+
+    result = agent.invoke({"messages": messages})
+    used_search = any(getattr(m, "type", None) == "tool" for m in result["messages"])
+    answer = result["messages"][-1].content
+    return answer, used_search
 ```
 
+**第三步:重启**
+
+```bash
+ps aux | grep Gemma4 | grep -v grep
+kill <PID>
+python3 Gemma4
 ```
+
+---
+
+**验证:** 传文件问一次 → 再问一次 → 不再报 400 就对了。
+
+如果改了还报错,把你**当前 `run_agent` 函数的完整内容**贴给我(`sed -n '95,130p' Gemma4` 大概能截到),我直接帮你对着改。
