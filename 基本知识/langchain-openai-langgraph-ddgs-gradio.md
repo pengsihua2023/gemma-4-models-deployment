@@ -18,3 +18,8 @@
 考虑到你之前在做的"verify-in-the-loop 财务报告生成管道"和"多 agent 病原体检测系统"，这个组合很适合——LangGraph 比原生 LangChain 更强大的流程控制能力可能比 CrewAI 或其他框架更灵活。Gradio 也可以快速原型化系统的前端。
 
 你是在考虑用这套技术栈重构某个项目吗？
+
+## 注意
+ 不用 llama-cpp-python，用的是 llama-server（llama.cpp 的服务版本）
+✓ 不用 langchain-community，用的就是 langchain-openai（通过本地 endpoint）
+✓ 应用已经完全配置好了
